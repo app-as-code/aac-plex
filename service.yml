@@ -1,0 +1,104 @@
+service:
+  name: aac-plex
+  friendly_name: Streaming
+  image_repo: lscr.io/linuxserver/plex
+  image_tag: 1.43.0.10492-121068a07-ls295
+  description: Stream your media anywhere
+  icon: plex.png
+  category: Medien - Entertainment
+  stage: prod
+  hostname: plex
+ports:
+- name: web
+  port: 32400
+  external_port: 32400
+config:
+  domain_name: example.com
+  routing_port: 32400
+  integrations:
+    homepage:
+      enabled: true
+    autodns:
+      enabled: true
+    traefik:
+      enabled: true
+      cert_resolver: ionos
+      entrypoint: websecure
+  generate_hostname: false
+  schema_version: 2
+stage_overrides:
+  prod:
+    config:
+      generate_hostname: false
+    service:
+      hostname: plex
+secrets:
+  PLEX_CLAIM: CHANGE_ME
+  HOMEPAGE_WIDGET_KEY: CHANGE_ME
+volumes:
+  library:
+    description: Plex library, metadata, and configuration
+  tvseries:
+    description: Mount point for TV series media
+  movies:
+    description: Auto-migrated raw volume for /movies
+    type: bind
+    source: /mnt/homenas/netzlaufwerk-feser/Bibliothek
+deployment_strategy:
+  main:
+    enabled: true
+    target_stage: prod
+  dev:
+    enabled: true
+    target_stage: dev
+  test:
+    enabled: false
+    target_stage: test
+  ansible-dev:
+    enabled: true
+    target_stage: dev
+  iac-dev:
+    enabled: true
+    target_stage: dev
+  template-dev:
+    enabled: true
+    target_stage: dev
+deployments:
+  docker_compose:
+    restart_policy: always
+    host_base_path: /export/docker/plex
+    network_mode: host
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities:
+            - gpu
+            - compute
+            - compat32
+            - graphics
+            - utility
+            - video
+    volumes:
+    - library:/config
+    - tvseries:/tv
+    - movies:/movies
+    environment:
+      PUID: '{{ vars.PUID }}'
+      PGID: '{{ vars.PGID }}'
+      TZ: '{{ vars.TZ }}'
+      VERSION: '{{ vars.VERSION }}'
+      NVIDIA_VISIBLE_DEVICES: '{{ vars.NVIDIA_VISIBLE_DEVICES }}'
+      NVIDIA_DRIVER_CAPABILITIES: '{{ vars.NVIDIA_DRIVER_CAPABILITIES }}'
+      PLEX_CLAIM: '{{ secrets.PLEX_CLAIM }}'
+      HOMEPAGE_WIDGET_KEY: '{{ secrets.HOMEPAGE_WIDGET_KEY }}'
+vars:
+  PUID: '1000'
+  PGID: '1000'
+  TZ: Europe/Berlin
+  VERSION: docker
+  NVIDIA_VISIBLE_DEVICES: all
+  NVIDIA_DRIVER_CAPABILITIES: compute,video,utility,compat32

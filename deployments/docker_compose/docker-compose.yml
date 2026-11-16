@@ -1,0 +1,77 @@
+services:
+  # --- Main Application Service ---
+  aac-plex:
+    image: "lscr.io/linuxserver/plex:1.43.0.10492-121068a07-ls295"
+    container_name: "aac-plex"
+    hostname: "plex"
+    restart: "always"
+
+
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "Europe/Berlin"
+      VERSION: "docker"
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,video,utility,compat32"
+      PLEX_CLAIM: "${PLEX_CLAIM:?set PLEX_CLAIM in .env (see .env.example)}"
+      HOMEPAGE_WIDGET_KEY: "${HOMEPAGE_WIDGET_KEY:?set HOMEPAGE_WIDGET_KEY in .env (see .env.example)}"
+    ports:
+      - "32400:32400/tcp"
+
+    volumes:
+      - "/export/docker/plex/aac-plex/library:/config"
+      - "/export/docker/plex/aac-plex/tvseries:/tv"
+      - "/mnt/homenas/netzlaufwerk-feser/Bibliothek:/movies"
+
+
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.aac-plex.rule: "Host(`plex.example.com`)"
+      traefik.http.routers.aac-plex.entrypoints: "websecure"
+      traefik.http.routers.aac-plex.tls: "true"
+      traefik.http.routers.aac-plex.tls.certresolver: "ionos"
+      traefik.http.services.aac-plex.loadbalancer.server.url: "http://192.0.2.1:32400"
+      auto-dns.createWildcard.aac-plex: "false"
+      auto-dns.customDNS.aac-plex: "true"
+      auto-dns.customDOMAIN.aac-plex: "example.com"
+      auto-dns.customHost.aac-plex: "plex"
+      homepage.group: "Medien - Entertainment"
+      homepage.name: "Streaming"
+      homepage.href: "https://plex.example.com"
+      homepage.icon: "plex.png"
+      homepage.description: "Stream your media anywhere"
+
+
+    network_mode: host
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities:
+            - gpu
+            - compute
+            - compat32
+            - graphics
+            - utility
+            - video
+
+
+
+networks:
+  secured:
+    name: "services-secured"
+    external: true
+  exposed:
+    name: "services-exposed"
+    external: true
+  interconnect:
+    name: "docker-default"
+    external: true
+  stack_internal:
+    name: "aac-plex_stack_internal"
+    driver: "bridge"
+
